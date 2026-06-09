@@ -1,136 +1,124 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function LoginPage() {
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
 
-  const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const res = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
+    const result = await signIn("credentials", {
+      email:    email.trim().toLowerCase(),
+      password: password,
       redirect: false,
     });
 
-    if (res?.error) {
-      setError("Invalid email or password. Please try again.");
-    } else {
-      router.push(callbackUrl);
-      router.refresh();
-    }
     setLoading(false);
-  };
+
+    if (!result || result.error) {
+      setError("Incorrect email or password. Please try again.");
+      return;
+    }
+
+    // Fetch the new session to know the role
+    const res  = await fetch("/api/auth/session");
+    const data = await res.json();
+    const role = data?.user?.role;
+
+    // Hard navigate — clears all state properly
+    window.location.href = role === "admin" ? "/admin" : "/";
+  }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.iconWrap}>📚</div>
-        <h1 style={styles.title}>Welcome Back</h1>
-        <p style={styles.subtitle}>Sign in to your BookBuddy account</p>
+    <div style={s.page}>
+      <div style={s.card}>
+        <div style={s.icon}>📚</div>
+        <h1 style={s.title}>Welcome Back</h1>
+        <p style={s.sub}>Sign in to your BookBuddy account</p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.field}>
-            <label style={styles.label}>Email</label>
+        <form onSubmit={handleSubmit} method="post" style={s.form}>
+          <div style={s.field}>
+            <label style={s.label}>Email</label>
             <input
-              type="email" name="email" value={form.email}
-              onChange={handleChange} placeholder="you@example.com"
-              required style={styles.input}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              autoComplete="email"
+              style={s.input}
             />
           </div>
-          <div style={styles.field}>
-            <label style={styles.label}>Password</label>
+
+          <div style={s.field}>
+            <label style={s.label}>Password</label>
             <input
-              type="password" name="password" value={form.password}
-              onChange={handleChange} placeholder="••••••••"
-              required style={styles.input}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+              style={s.input}
             />
-            <Link href="/forgot-password" style={styles.forgot}>Forgot password?</Link>
+            <div style={{ textAlign: "right" }}>
+              <Link href="/forgot-password" style={s.forgot}>Forgot password?</Link>
+            </div>
           </div>
 
-          {error && <div style={styles.error}>⚠️ {error}</div>}
+          {error && (
+            <div style={s.errorBox}>⚠️ {error}</div>
+          )}
 
-          <button type="submit" disabled={loading} style={styles.btn}>
-            {loading ? "Signing in..." : "Sign In"}
+          <button type="submit" disabled={loading} style={{ ...s.btn, opacity: loading ? 0.7 : 1 }}>
+            {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>
 
-        <p style={styles.switchText}>
+        <p style={s.footer}>
           Don&apos;t have an account?{" "}
-          <Link href="/register" style={styles.switchLink}>Create one</Link>
+          <Link href="/register" style={s.link}>Create one</Link>
         </p>
       </div>
     </div>
   );
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div style={{ textAlign: "center", padding: "80px" }}>Loading...</div>}>
-      <LoginForm />
-    </Suspense>
-  );
-}
-
-const styles = {
-  page: { display: "flex", justifyContent: "center", alignItems: "center", minHeight: "70vh" },
-  card: {
-    background: "white",
-    borderRadius: "20px",
-    padding: "40px",
-    width: "100%",
-    maxWidth: "420px",
-    border: "1px solid #e5e7eb",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+const s = {
+  page:  { display: "flex", justifyContent: "center", alignItems: "center", minHeight: "70vh" },
+  card:  {
+    background: "white", borderRadius: "20px", padding: "44px 40px",
+    width: "100%", maxWidth: "420px",
+    border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.09)",
     textAlign: "center",
   },
-  iconWrap: { fontSize: "48px", marginBottom: "16px" },
-  title: { fontSize: "28px", fontWeight: "800", margin: "0 0 8px", color: "#111827" },
-  subtitle: { color: "#6b7280", margin: "0 0 28px" },
-  form: { display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" },
+  icon:  { fontSize: "52px", marginBottom: "12px" },
+  title: { fontSize: "28px", fontWeight: "800", margin: "0 0 6px", color: "#111827" },
+  sub:   { color: "#6b7280", margin: "0 0 28px", fontSize: "15px" },
+  form:  { display: "flex", flexDirection: "column", gap: "18px", textAlign: "left" },
   field: { display: "flex", flexDirection: "column", gap: "6px" },
   label: { fontWeight: "600", fontSize: "14px", color: "#374151" },
   input: {
-    padding: "12px 14px",
-    border: "1px solid #d1d5db",
-    borderRadius: "10px",
-    fontSize: "15px",
-    outline: "none",
-    transition: "border-color 0.2s",
+    padding: "12px 14px", border: "1.5px solid #d1d5db", borderRadius: "10px",
+    fontSize: "15px", outline: "none", width: "100%", boxSizing: "border-box", color: "#111827",
   },
-  forgot: { textAlign: "right", fontSize: "13px", color: "#4f46e5", textDecoration: "none" },
-  error: {
-    background: "#fef2f2",
-    color: "#ef4444",
-    padding: "12px",
-    borderRadius: "10px",
-    fontSize: "14px",
-    border: "1px solid #fecaca",
+  forgot: { fontSize: "13px", color: "#4f46e5", textDecoration: "none" },
+  errorBox: {
+    background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca",
+    borderRadius: "10px", padding: "12px 14px", fontSize: "14px", fontWeight: "600",
   },
   btn: {
-    padding: "14px",
-    background: "#4f46e5",
-    color: "white",
-    border: "none",
-    borderRadius: "12px",
-    fontWeight: "700",
-    fontSize: "16px",
-    cursor: "pointer",
-    marginTop: "4px",
+    padding: "14px", background: "#4f46e5", color: "white", border: "none",
+    borderRadius: "12px", fontWeight: "700", fontSize: "16px", cursor: "pointer",
   },
-  switchText: { marginTop: "24px", color: "#6b7280", fontSize: "14px" },
-  switchLink: { color: "#4f46e5", fontWeight: "600", textDecoration: "none" },
+  footer:{ marginTop: "24px", color: "#6b7280", fontSize: "14px" },
+  link:  { color: "#4f46e5", fontWeight: "600", textDecoration: "none" },
 };
