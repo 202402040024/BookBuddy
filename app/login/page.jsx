@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,9 +27,9 @@ export default function LoginPage() {
     });
 
     if (res?.error) {
-      setError(res.error === "CredentialsSignin" ? "Invalid email or password." : res.error);
+      setError("Invalid email or password. Please try again.");
     } else {
-      router.push("/");
+      router.push(callbackUrl);
       router.refresh();
     }
     setLoading(false);
@@ -44,30 +46,22 @@ export default function LoginPage() {
           <div style={styles.field}>
             <label style={styles.label}>Email</label>
             <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              required
-              style={styles.input}
+              type="email" name="email" value={form.email}
+              onChange={handleChange} placeholder="you@example.com"
+              required style={styles.input}
             />
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Password</label>
             <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-              style={styles.input}
+              type="password" name="password" value={form.password}
+              onChange={handleChange} placeholder="••••••••"
+              required style={styles.input}
             />
             <Link href="/forgot-password" style={styles.forgot}>Forgot password?</Link>
           </div>
 
-          {error && <div style={styles.error}>{error}</div>}
+          {error && <div style={styles.error}>⚠️ {error}</div>}
 
           <button type="submit" disabled={loading} style={styles.btn}>
             {loading ? "Signing in..." : "Sign In"}
@@ -80,6 +74,14 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: "center", padding: "80px" }}>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
 

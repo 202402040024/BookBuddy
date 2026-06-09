@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Book from "@/models/Book";
 import BookCard from "@/components/BookCard";
 import SearchBar from "@/components/SearchBar";
+import AccessDeniedBanner from "@/components/AccessDeniedBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function HomePage() {
 
   return (
     <div>
+      <AccessDeniedBanner />
       {/* Hero Section */}
       <section style={styles.hero}>
         <div style={styles.heroContent}>
